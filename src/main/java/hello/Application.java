@@ -68,26 +68,47 @@ public class Application {
   @PostMapping("/**")
   public String index(@RequestBody ArenaUpdate arenaUpdate) {
     System.out.println(arenaUpdate);
-      writeCommittedStream.send(arenaUpdate.arena);
-//    int desiredWidth = arenaUpdate.arena.dims.get(0) / 2;
-//    int desiredHeight = arenaUpdate.arena.dims.get(1) / 2;
+    writeCommittedStream.send(arenaUpdate.arena);
+    int centerWidth = arenaUpdate.arena.dims.get(0) / 2;
+    int centerHeight = arenaUpdate.arena.dims.get(1) / 2;
     PlayerState myState = getMyState(arenaUpdate);
       if (!myState.wasHit && isAnybodyWithinTheShotRange(arenaUpdate)) {
           System.out.println("throwing");
           return "T";
       } else {
-          if (canGoForward(arenaUpdate)) {
+          int rand = new Random().nextInt(5);
+          if (canGoForward(arenaUpdate) && rand != 0) {
               System.out.println("going forward");
               return "F";
           } else {
-              System.out.println("turning right");
-              return "R";
+              String rotationCommand = rotate(arenaUpdate);
+              System.out.println("turning..." + rotationCommand);
+              return rotationCommand;
           }
 //          String[] moves = new String[] {"R", "F"};
 //          int rand = new Random().nextInt(2);
 //          String move = moves[rand];
 //          System.out.println("moving: " + move);
 //          return move;
+      }
+  }
+
+  private String rotate(ArenaUpdate currentState) {
+      PlayerState myState = getMyState(currentState);
+      int centerWidth = currentState.arena.dims.get(0) / 2;
+      int centerHeight = currentState.arena.dims.get(1) / 2;
+      String desiredDirection = chooseMoveDirection(myState, centerWidth, centerHeight);
+      String myCurrentDirection = myState.direction;
+      if (
+              myCurrentDirection.equals(desiredDirection)
+                      || ("N".equals(desiredDirection) && "E".equals(myCurrentDirection))
+                      || ("E".equals(desiredDirection) && "S".equals(myCurrentDirection))
+                      || ("S".equals(desiredDirection) && "W".equals(myCurrentDirection))
+                      || ("W".equals(desiredDirection) && "N".equals(myCurrentDirection))
+      ) {
+          return "L";
+      } else {
+          return "R";
       }
   }
 
@@ -134,18 +155,28 @@ public class Application {
               .anyMatch(isWithin);
   }
 
-  private boolean amIInPosition(PlayerState myState, int width, int height) {
-    return myState.x == width && myState.y == height;
-  }
-
-  private String moveTo(PlayerState myState, int width, int height) {
-    String desiredDirection = chooseMoveDirection(myState, width, height);
-    if (!myState.direction.equals(desiredDirection)) {
-      return "R";
-    } else {
-      return "F";
-    }
-  }
+//  private boolean amIInPosition(PlayerState myState, int width, int height) {
+//    return myState.x == width && myState.y == height;
+//  }
+//
+//  private String moveTowards(PlayerState myState, int width, int height) {
+//    String desiredDirection = chooseMoveDirection(myState, width, height);
+//      String myCurrentDirection = myState.direction;
+//      if (!myCurrentDirection.equals(desiredDirection)) {
+//          if (
+//                  ("N".equals(desiredDirection) && "E".equals(myCurrentDirection))
+//                  || ("E".equals(desiredDirection) && "S".equals(myCurrentDirection))
+//                  || ("S".equals(desiredDirection) && "W".equals(myCurrentDirection))
+//                  || ("W".equals(desiredDirection) && "N".equals(myCurrentDirection))
+//          ) {
+//            return "L";
+//          } else {
+//              return "R";
+//          }
+//      } else {
+//          return "F";
+//    }
+//  }
 
   private String chooseMoveDirection(PlayerState myState, int desiredWidth, int desiredHeight) {
     if (desiredWidth < myState.x) {
