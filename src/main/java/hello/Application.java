@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 
 import com.google.api.core.ApiFuture;
@@ -72,16 +73,19 @@ public class Application {
 //    int desiredWidth = arenaUpdate.arena.dims.get(0) / 2;
 //    int desiredHeight = arenaUpdate.arena.dims.get(1) / 2;
     PlayerState myState = getMyState(arenaUpdate);
-      if (!myState.wasHit && isAnybodyWithinTheShotRange(arenaUpdate)) {
+    if (myState.wasHit) {
+        return run(arenaUpdate);
+    }
+      if (isAnybodyWithinTheShotRange(arenaUpdate)) {
           System.out.println("throwing");
           return "T";
       } else {
-          if (canGoForward(arenaUpdate)) {
+          int rand = new Random().nextInt(5); //rotate every x moves forward
+          if (canGoForward(arenaUpdate) && rand != 0) {
               System.out.println("going forward");
               return "F";
           } else {
-              System.out.println("turning right");
-              return "R";
+              return rotateHeadingToCenter(arenaUpdate);
           }
 //          String[] moves = new String[] {"R", "F"};
 //          int rand = new Random().nextInt(2);
@@ -90,6 +94,35 @@ public class Application {
 //          return move;
       }
   }
+
+  private String run(ArenaUpdate currentState) {
+      if (canGoForward(currentState)) {
+          System.out.println("running forward");
+          return "F";
+      } else {
+          System.out.println("running right");
+          return "R";
+      }
+  }
+
+    private String rotateHeadingToCenter(ArenaUpdate currentState) {
+        PlayerState myState = getMyState(currentState);
+        int centerWidth = currentState.arena.dims.get(0) / 2;
+        int centerHeight = currentState.arena.dims.get(1) / 2;
+        String desiredDirection = chooseMoveDirection(myState, centerWidth, centerHeight);
+        String myCurrentDirection = myState.direction;
+        if (
+                myCurrentDirection.equals(desiredDirection)
+                        || ("N".equals(desiredDirection) && "E".equals(myCurrentDirection))
+                        || ("E".equals(desiredDirection) && "S".equals(myCurrentDirection))
+                        || ("S".equals(desiredDirection) && "W".equals(myCurrentDirection))
+                        || ("W".equals(desiredDirection) && "N".equals(myCurrentDirection))
+        ) {
+            return "L";
+        } else {
+            return "R";
+        }
+    }
 
   private boolean canGoForward(ArenaUpdate currentState) {
       PlayerState myState = getMyState(currentState);
