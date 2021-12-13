@@ -10,6 +10,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
 import com.google.api.core.ApiFuture;
@@ -67,6 +68,8 @@ public class Application {
     return "Let the battle begin!";
   }
 
+    private final AtomicInteger consecutiveHitCounter = new AtomicInteger(0);
+
   @PostMapping("/**")
   public String index(@RequestBody ArenaUpdate arenaUpdate) {
     System.out.println(arenaUpdate);
@@ -74,7 +77,13 @@ public class Application {
 //    int desiredWidth = arenaUpdate.arena.dims.get(0) / 2;
 //    int desiredHeight = arenaUpdate.arena.dims.get(1) / 2;
     PlayerState myState = getMyState(arenaUpdate);
+    int consecutiveHits = 0;
     if (myState.wasHit) {
+        consecutiveHits = consecutiveHitCounter.incrementAndGet();
+    } else {
+        consecutiveHitCounter.set(0);
+    }
+    if (consecutiveHits > 2) {
         return run(arenaUpdate);
     }
       if (isAnybodyWithinTheShotRange(arenaUpdate)) {
