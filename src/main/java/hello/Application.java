@@ -64,12 +64,42 @@ public class Application {
           System.out.println("throwing");
           return "T";
       } else {
-          String[] moves = new String[] {"R", "F"};
-          int rand = new Random().nextInt(2);
-          String move = moves[rand];
-          System.out.println("moving: " + move);
-          return move;
+          if (canGoForward(arenaUpdate)) {
+              System.out.println("going forward");
+              return "F";
+          } else {
+              System.out.println("turning right");
+              return "R";
+          }
+//          String[] moves = new String[] {"R", "F"};
+//          int rand = new Random().nextInt(2);
+//          String move = moves[rand];
+//          System.out.println("moving: " + move);
+//          return move;
       }
+  }
+
+  private boolean canGoForward(ArenaUpdate currentState) {
+      PlayerState myState = getMyState(currentState);
+      int forwardFieldWidth = myState.x;
+      int forwardFieldHeight = myState.y;
+      if (myState.direction.equals("N")) {
+          forwardFieldHeight--;
+      } else if (myState.direction.equals("E")) {
+          forwardFieldWidth++;
+      } else if (myState.direction.equals("S")) {
+          forwardFieldHeight++;
+      } else {
+          forwardFieldWidth--;
+      }
+      if (forwardFieldWidth < 0 || forwardFieldHeight < 0 || forwardFieldWidth >= currentState.arena.dims.get(0) || forwardFieldHeight >= currentState.arena.dims.get(1)) {
+          return false;
+      }
+      int finalForwardFieldWidth = forwardFieldWidth;
+      int finalForwardFieldHeight = forwardFieldHeight;
+      return currentState.arena.state.values()
+              .stream()
+              .noneMatch(player -> player.x == finalForwardFieldWidth && player.y == finalForwardFieldHeight);
   }
 
   private boolean isAnybodyWithinTheShotRange(ArenaUpdate currentState) {
