@@ -1,14 +1,15 @@
 package hello;
 
+import com.sun.tools.javac.util.Pair;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 
 import com.google.api.core.ApiFuture;
@@ -80,19 +81,35 @@ public class Application {
           System.out.println("throwing");
           return "T";
       } else {
-          int rand = new Random().nextInt(5); //rotate every x moves forward
-          if (canGoForward(arenaUpdate) && rand != 0) {
-              System.out.println("going forward");
-              return "F";
-          } else {
-              return rotateHeadingToCenter(arenaUpdate);
-          }
+          PlayerState nearestOpponent = locateNearestOpponent(arenaUpdate);
+          return moveTo(arenaUpdate, nearestOpponent.x, nearestOpponent.y);
 //          String[] moves = new String[] {"R", "F"};
 //          int rand = new Random().nextInt(2);
 //          String move = moves[rand];
 //          System.out.println("moving: " + move);
 //          return move;
       }
+  }
+
+    private String moveTo(ArenaUpdate currentState, int width, int height) {
+        PlayerState myState = getMyState(currentState);
+        String desiredDirection = chooseMoveDirection(myState, width, height);
+        if (myState.direction.equals(desiredDirection) && canGoForward(currentState)) {
+            return "F";
+        } else {
+            return rotateHeadingToPoint(myState, width, height);
+        }
+    }
+
+  private PlayerState locateNearestOpponent(ArenaUpdate currentState) {
+      PlayerState myState = getMyState(currentState);
+      return currentState.arena.state.values()
+              .stream()
+              .filter(player -> !(player.x == myState.x && player.y == myState.y))
+              .map(opponent -> Pair.of(opponent, Math.pow(Math.abs(myState.x - opponent.x), 2) + Math.pow(Math.abs(myState.y) - opponent.y, 2)))
+              .min(Comparator.comparingDouble(o -> o.snd))
+              .map(pair -> pair.fst)
+              .get();
   }
 
   private String run(ArenaUpdate currentState) {
@@ -105,11 +122,8 @@ public class Application {
       }
   }
 
-    private String rotateHeadingToCenter(ArenaUpdate currentState) {
-        PlayerState myState = getMyState(currentState);
-        int centerWidth = currentState.arena.dims.get(0) / 2;
-        int centerHeight = currentState.arena.dims.get(1) / 2;
-        String desiredDirection = chooseMoveDirection(myState, centerWidth, centerHeight);
+    private String rotateHeadingToPoint(PlayerState myState, int pointX, int pointY) {
+        String desiredDirection = chooseMoveDirection(myState, pointX, pointY);
         String myCurrentDirection = myState.direction;
         if (
                 myCurrentDirection.equals(desiredDirection)
@@ -169,15 +183,6 @@ public class Application {
 
   private boolean amIInPosition(PlayerState myState, int width, int height) {
     return myState.x == width && myState.y == height;
-  }
-
-  private String moveTo(PlayerState myState, int width, int height) {
-    String desiredDirection = chooseMoveDirection(myState, width, height);
-    if (!myState.direction.equals(desiredDirection)) {
-      return "R";
-    } else {
-      return "F";
-    }
   }
 
   private String chooseMoveDirection(PlayerState myState, int desiredWidth, int desiredHeight) {
